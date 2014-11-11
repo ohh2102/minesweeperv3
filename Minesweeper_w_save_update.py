@@ -223,14 +223,14 @@ def Get_or_Play():
             i=0
             k=0
             for lines in f:
-                Board.board[(i,k)].save_value=lines
+                temp_lines=lines.split()
+                Board.board[(i,k)].save_value=temp_lines[0]+' '+temp_lines[1]
                 k=(k+1)%rows
                 if k==0:
                     i=i+1
             f.close()
         for j in Board.board:
             save_values=Board.board[j].save_value.split()
-            
             
             if save_values[1]=='M':
                 Board.board[j].loc_mine.on_status=True
@@ -280,7 +280,6 @@ Get_or_Play()
         
 
         
-        
     
         
         
@@ -296,7 +295,7 @@ Get_or_Play()
 
         
 
-        
+
 
         
         
