@@ -16,11 +16,12 @@ class locations:
         self.loc_mine=mine()
         self.marked=False
         self.showing=False
-        self.save_value=0
         self.adj_cord=[]
         self.adj_col=[]
         self.adj_row=[]
         self.loc_value=0
+        self.show_value='*'
+        self.save_value=str(self.loc_value)+' ns'
         self.avail=1
         self.adj_col.append(column)
         self.adj_row.append(row)
@@ -52,36 +53,43 @@ class Game_Board:
                 self.keys.append((i,k))
                 
     def player_pick(self, row, column):
-        if (column,row) in self.board and self.board[(row, column)].showing==False:
-            if self.board[(row,column)].loc_mine.on_status==False:
-                if all(self.board[adjacents].loc_mine.on_status==False for adjacents in self.board[(row,column)].adj_cord):
-                    self.board[(column,row)].showing=True
-                    self.board[(column,row)].loc_value='x'
-                    self.board[(column,row)].save_value=-2
-                    self.board[(column,row)].avail=0
-                    for adj in self.board[(column,row)].adj_cord:
-                       self.board[adj].showing=True
-                       self.board[adj].loc_value='x'
-                       self.board[adj].save_value=-2
-                       self.board[adj].avail=0
-                       
-                else:
-                    adj_bombs=0
-                    self.board[(column,row)].avail=0
-                    for i in self.board[(column,row)].adj_cord:
-                       if self.board[i].loc_mine.on_status==True:
-                           adj_bombs=adj_bombs+1
-                           self.board[(column,row)].loc_value=adj_bombs
-                           self.board[(column,row)].save_value=adj_bombs
-                           self.board[(column,row)].showing=True
+        if (column,row) in self.board and self.board[(column,row)].showing==False:
+            if self.board[(column,row)].loc_mine.on_status==False and self.board[(column,row)].loc_value==0:
+                self.board[(column,row)].avail=0.5
+                self.board[(column,row)].showing=True
+                queue=[]
+                queue.append((column, row))
+                while len(queue)!=0:
+                    search=queue.pop(0)
+                    for i in self.board[search].adj_cord:
+                        if self.board[i].avail==1 and self.board[i].loc_value==0:
+                            self.board[i].avail=0.5
+                            self.board[i].showing=True
+                            queue.append(i)
+                        elif self.board[i].avail==1 and self.board[i].loc_value!=0:
+                            self.board[i].showing=True
+                            self.board[i].avail=0
+                            self.board[i].show_value=self.board[i].loc_value
+                            self.board[i].save_value=str(self.board[i].loc_value)+' s'
+                        
+                    self.board[search].avail=0
+                    self.board[search].show_value=self.board[search].loc_value
+                    self.board[search].save_value=str(self.board[search].loc_value)+' s'
+                    
+            elif self.board[(column,row)].loc_mine.on_status==False and self.board[(column,row)].loc_value!=0:
+                self.board[(column, row)].show_value=self.board[(column, row)].loc_value
+                self.board[(column, row)].avail=0
+                self.board[(column, row)].save_value=str(self.board[(column, row)].loc_value)+' s'
+                        
                            
                 return 1
             else:
                 print "YOU LOSE!!"
                 return 0
         else:
-            return 2
             print "the coordinates you picked are not on the board"
+            return 2
+            
 
             
     def place_bombs(self, numb_bombs):
@@ -90,28 +98,36 @@ class Game_Board:
             self.board[bombs_locs].loc_mine.on_status=True
             self.board[bombs_locs].save_value=-1
             self.board[bombs_locs].avail=0
+            self.board[bombs_locs].save_value='B M'
+            for i in self.board[bombs_locs].adj_cord:
+                if self.board[i].loc_mine.on_status==False:
+                    self.board[i].loc_value=self.board[i].loc_value+1
+                    self.board[i].save_value=str(self.board[i].loc_value)+' ns'
             self.bomb_num=numb_bombs
+            
     def print_board(self):
         rows_to_print=[]
         current_row=[]
         for i in range(self.rows):
             for j in range(self.columns):
-                current_row.append(self.board[(j,i)].loc_value)
+                current_row.append(self.board[(j,i)].show_value)
             rows_to_print.append(current_row)
             current_row=[]
         for k in rows_to_print:
-            print k
+            print '[%s]' % ', '.join(map(str, k))
+            
     def any_left(self):
         if all(self.board[values].avail==0 for values in self.board):
             print "YOU WIN"
             return 1
         else:
             return 0
+        
     def save_game(self, filename1, filename2):
         f=open(filename1, 'w')
         sorted_dict=sorted(self.board)
         for i in sorted_dict:
-            text=str(self.board[i].save_value)
+            text=self.board[i].save_value
             f.write(text)
             f.write('\n')
         f.close()
@@ -124,11 +140,6 @@ class Game_Board:
         g.close()
         
     
-        
-        
-        
-                       
-
 
 def Game():
   
@@ -212,26 +223,27 @@ def Get_or_Play():
             i=0
             k=0
             for lines in f:
-                Board.board[(i,k)].save_val=int(lines)
+                Board.board[(i,k)].save_value=lines
                 k=(k+1)%rows
                 if k==0:
                     i=i+1
             f.close()
         for j in Board.board:
-            if Board.board[j].save_val==-1:
+            save_values=Board.board[j].save_value.split()
+            
+            
+            if save_values[1]=='M':
                 Board.board[j].loc_mine.on_status=True
                 Board.board[j].avail=0
                 
-            elif Board.board[j].save_val==-2:
-                Board.board[j].loc_value='x'
+            elif save_values[1]=='s':
+                Board.board[j].loc_value=int(save_values[0])
+                Board.board[j].show_value=int(save_values[0])
                 Board.board[j].avail=0
                 Board.board[j].showing=True
-            elif Board.board[j].save_val==0:
-                Board.board[j].loc_value=0
-            else:
-                Board.board[j].loc_value=Board.board[j].save_val
-                Board.board[j].avail=0
-                Board.board[j].showing=True
+            elif save_values[1]=='ns':
+                Board.board[j].loc_value=int(save_values[0])
+   
         playing_status=True
         while playing_status==True:
             Board.print_board()
@@ -265,6 +277,25 @@ def Get_or_Play():
         
 
 Get_or_Play()       
+        
+
+        
+        
+    
+        
+        
+
+        
+     
+        
+        
+        
+    
+        
+        
+
+        
+
         
 
         
